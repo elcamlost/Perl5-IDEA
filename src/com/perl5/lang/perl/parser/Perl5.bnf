@@ -85,10 +85,10 @@ private perlFile ::= <<parseFile>> <<eof>>
 private file_items ::= file_item*
 
 private block_safe ::= <<parseBlock>>
-block ::= "{" file_items "}" {pin=1} // should not be used anywhere, injected by block_safe
+block ::= "{" file_items "}"  // should not be used anywhere, injected by block_safe
 
 private file_item ::= namespace | namespace_element
-private namespace_element ::= (sub_definition | named_block | compound_statement | statement ) PERL_SEMI*
+private namespace_element ::= (sub_definition | named_block | compound_statement | statement <<statementSemi>> ) PERL_SEMI*
 
 // package keyword
 namespace ::= 'package' <<parsePerlPackage>> {pin=1}
@@ -114,7 +114,7 @@ unless_compound ::= 'unless' compound_conditional_block if_compound_elsif * [if_
 private if_compound_elsif ::= 'elsif' compound_conditional_block
 private if_compound_else  ::= 'else' block_safe
 
-private compound_conditional_block ::= '(' expr ')' block_safe
+private compound_conditional_block ::= paren_expr_term block_safe
 
 given_compound ::= 'given' compound_conditional_block
 
@@ -131,21 +131,18 @@ for_compound ::= 'for' for_compound_arguments
 foreach_compound ::= 'foreach' for_compound_arguments
 private for_compound_arguments ::= for_compound_arguments_iteration | for_compound_arguments_list
 
-private for_compound_arguments_iteration ::= '(' [expr]  PERL_SEMI [expr] PERL_SEMI [expr] ')' block_safe
+private for_compound_arguments_iteration ::=  for_compound_arguments_iteration_arguments block_safe
+private for_compound_arguments_iteration_arguments ::= '(' [expr]  PERL_SEMI [expr] PERL_SEMI [expr] ')' {pin=1}
 
 // @todo only single variable or variable definition may be here
 private for_compound_arguments_list ::=
-    [ variable_declaration | variable ] '(' expr ')' block_compound
+    [ variable_declaration | variable ] paren_expr_term block_compound
 
-private statement ::= statement_variation [statement_modifier] (<<statementSemi>>|<<eof>>) //{recoverWhile=recover_statement}
+private statement ::= statement_variation [statement_modifier] {recoverWhile=recover_statement}
 
 private statement_variation ::=
     use_statement
     | no_statement
-    | undef_statement
-    | last_statement
-    | next_statement
-    | redo_statement
     | sub_declaration
     | expr
 
@@ -157,16 +154,18 @@ private sub_definition_parameters ::=
     | sub_signature
 
 sub_declaration ::= 'sub' <<parseSubDeclaration>>
+
 private sub_declaration_parameters ::=  [sub_prototype] [sub_attributes]
 
-private sub_prototype ::= "(" [<<parseSubPrototype>>] ")"
-private sub_signature ::= "(" [<<parseSubSignature>>] ")"
-private sub_attributes ::= ":" <<parseSubAttributes>>
+private sub_prototype ::= "(" [<<parseSubPrototype>>] ")" {pin=1}
+private sub_signature ::= "(" [<<parseSubSignature>>] ")" {pin=1}
+private sub_attributes ::= ":" <<parseSubAttributes>> {pin=1}
 
+//private recover_attributes ::= !(" (" | PERL_LBRACE)
 
-last_statement ::= 'last' [lnr_param] {pin=1}
-next_statement ::= 'next' [lnr_param] {pin=1}
-redo_statement ::= 'redo' [lnr_param] {pin=1}
+last_term ::= 'last' [lnr_param]
+next_term ::= 'next' [lnr_param]
+redo_term ::= 'redo' [lnr_param]
 private lnr_param ::= label | expr
 
 
@@ -187,16 +186,15 @@ for_statement_modifier ::=  'for' expr  {pin=1}   // actually @LIST
 foreach_statement_modifier ::=  'foreach' expr {pin=1} // actually @LIST
 when_statement_modifier ::= 'when' expr {pin=1}
 
-
 use_statement ::= 'use' <<parseUseStatement>> {pin=1}
 no_statement ::= 'no' <<parseNoStatement>> {pin=1}
 
-undef_statement ::= "undef" variable {pin=1}
 
-require_term ::= 'require' (perl_package | perl_version | string)  {pin=1} // multiline string is possible too
-
-//private recover_statement ::= !(PERL_SEMI  | <<eof>>)
-//private recover_block ::= !(PERL_RBRACE | <<eof>>)
+private recover_statement ::= !(PERL_SEMI  | <<eof>>)
+private recover_paren ::= !(PERL_RPAREN | <<eof>>)
+private recover_angle ::= !(PERL_RANGLE | <<eof>>)
+private recover_brace ::= !(PERL_RBRACE | <<eof>>)
+private recover_brack ::= !(PERL_RBRACK | <<eof>>)
 
 // expression
 expr ::=
@@ -228,8 +226,8 @@ expr ::=
 term_expr ::=
     variable
     | variable_declaration
-    | PERL_OPERATOR_UNARY "(" [expr] ")" // named operators as functions
-    | "(" [expr] ")"
+    | PERL_OPERATOR_UNARY paren_expr_term // named operators as functions
+    | paren_expr_term
     | scalar_primitive
     | do_term
     | sub_term
@@ -244,7 +242,15 @@ term_expr ::=
     | sort_term
     | map_term
     | require_term
+    | undef_term
+    | last_term
+    | next_term
+    | redo_term
     | function_call
+
+private paren_expr_term ::= "(" [expr] ")" {pin=1}
+private brack_expr_term ::= "[" [expr] "]" {pin=1}
+private brace_expr_term ::= "{" [expr] "}" {pin=1}
 
 deref_expr ::= expr <<parseArrowSmart>> nested_element_expr
 
@@ -287,10 +293,14 @@ lp_or_xor_expr ::= expr ('or'|'xor') expr
 
 private scalar_expr ::= <<parseExpressionLevel 4>>
 
-print_term ::= ("print"|"say") ( "(" [print_arguments] ")" | [print_arguments] ) {pin=1}
+print_term ::= ("print"|"say") ( "(" [print_arguments] ")" | [print_arguments] )
+undef_term ::= "undef" variable
+
+require_term ::= 'require' (perl_package | perl_version | string)  // @todo multiline string is possible too
+
 private print_arguments ::= perl_handle expr | expr
 
-open_term ::= "open" ( "(" open_arguments ")" | open_arguments ) {pin=1}
+open_term ::= "open" ( "(" open_arguments ")" | open_arguments )
 private open_arguments ::=
     open_handle [                       // open FILEHANDLE
         "," (
@@ -306,7 +316,7 @@ open_mode ::= scalar_expr
 open_ref ::= ref_expr
 open_file ::= perl_handle | scalar_expr
 
-close_term ::= "close" ( "(" close_arguments ")" | close_arguments ) {pin=1}
+close_term ::= "close" ( "(" close_arguments ")" | close_arguments )
 private close_arguments ::= perl_handle
 
 sort_term ::= 'sort' sort_op_arguments
@@ -327,7 +337,7 @@ private grep_map_arguments_variations ::=
     block_safe expr
     | scalar_expr "," expr
 
-private function_call ::= callable "(" [expr] ")"
+private function_call ::= callable paren_expr_term
 
 file_read_term ::= '<' [perl_handle] '>'
 
@@ -367,13 +377,12 @@ private variable_declaration ::=
 
 // @todo attributes support
 // @todo local variables supports hash/aray elements
-variable_declaration_local ::= 'local' [perl_package]  variable_definition_variation
-variable_declaration_lexical ::= ('my' | 'state') [perl_package] variable_definition_variation
-variable_declaration_global ::= 'our' [perl_package] variable_definition_variation
+variable_declaration_local ::= 'local' [perl_package]  variable_definition_variation {pin=1}
+variable_declaration_lexical ::= ('my' | 'state') [perl_package] variable_definition_variation {pin=1}
+variable_declaration_global ::= 'our' [perl_package] variable_definition_variation {pin=1}
 
-private variable_definition_variation ::=
-    '(' variable (',' variable ) * ')'
-    | variable
+private variable_definition_variation ::= variable_definition_paren | variable
+private variable_definition_paren ::= '(' variable (',' variable ) * ')' {pin=1}
 
 /////////////////////////////////// REFERENCES /////////////////////////////////////////////////////////////////////////
 // most of the references created by \ operator, but some - don't
@@ -383,10 +392,10 @@ reference_value ::=
     | code_ref
     | glob_item_ref
 
-private anon_array_ref ::= '[' [expr] ']'
-private anon_hash_ref ::= '{' [expr] '}'
+private anon_array_ref ::= brack_expr_term
+private anon_hash_ref ::= brace_expr_term
 private code_ref ::= "sub" block_safe
-private glob_item_ref ::= perl_glob "{" glob_item_ref_variant "}"
+private glob_item_ref ::= perl_glob "{" glob_item_ref_variant "}" {pin=2}
 private glob_item_ref_variant ::=
     "SCALAR"
     | "ARRAY"
@@ -403,12 +412,12 @@ private glob_item_ref_variant ::=
 private variable ::= scalar | array | hash | perl_glob
 
 private array ::=
-    array_primitive '[' expr ']'              // array slice
-    | array_primitive '{' expr '}'              // hash slice
+    array_primitive brack_expr_term              // array slice
+    | array_primitive brace_expr_term              // hash slice
     | array_primitive
 
 private hash ::=
-    PERL_SIGIL_HASH '{' expr '}'   // hash dereference w braces
+    PERL_SIGIL_HASH brace_expr_term   // hash dereference w braces
     | PERL_SIGIL_HASH scalar_expr       // scalar dereference wo braces
     | perl_hash                    // hash as is
 
@@ -416,23 +425,23 @@ private scalar ::=
     perl_scalar nested_element    // hash or array item
     | perl_scalar
     | PERL_SIGIL_SCALAR "{" PERL_BAREWORD "}"
-    | "(" expr ")" nested_element
+    | paren_expr_term nested_element
     | 'undef'
 
 private nested_element ::=
     "{" PERL_BAREWORD  "}"
-    | "{" expr  "}"
-    | "[" expr "]"
+    | brack_expr_term
+    | brace_expr_term
 
 // extended nested element for using in ()
 private nested_element_expr ::=
     nested_element
-    | "(" [expr] ")"    // function call like $var->()
+    | paren_expr_term    // function call like $var->()
     | scalar_call
     | function_call
     | rightward_call_expr
 
-scalar_call ::= perl_scalar "(" [expr] ")"
+scalar_call ::= perl_scalar paren_expr_term
 
 ///////////////////////////////////// CALLABLE /////////////////////////////////////////////////////////////////////////
 

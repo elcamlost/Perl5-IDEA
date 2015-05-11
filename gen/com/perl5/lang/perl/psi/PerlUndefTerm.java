@@ -5,9 +5,21 @@ import java.util.List;
 import org.jetbrains.annotations.*;
 import com.intellij.psi.PsiElement;
 
-public interface PerlGivenCompound extends PsiElement {
+public interface PerlUndefTerm extends PsiElement {
 
   @Nullable
   PerlExpr getExpr();
+
+  @Nullable
+  PerlPerlArray getPerlArray();
+
+  @Nullable
+  PerlPerlGlob getPerlGlob();
+
+  @Nullable
+  PerlPerlHash getPerlHash();
+
+  @Nullable
+  PerlPerlScalar getPerlScalar();
 
 }

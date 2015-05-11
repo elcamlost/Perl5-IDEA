@@ -11,21 +11,21 @@ import static com.perl5.lang.perl.lexer.PerlElementTypes.*;
 import com.intellij.extapi.psi.ASTWrapperPsiElement;
 import com.perl5.lang.perl.psi.*;
 
-public class PerlWhileCompoundImpl extends ASTWrapperPsiElement implements PerlWhileCompound {
+public class PerlStringImpl extends ASTWrapperPsiElement implements PerlString {
 
-  public PerlWhileCompoundImpl(ASTNode node) {
+  public PerlStringImpl(ASTNode node) {
     super(node);
   }
 
   public void accept(@NotNull PsiElementVisitor visitor) {
-    if (visitor instanceof PerlVisitor) ((PerlVisitor)visitor).visitWhileCompound(this);
+    if (visitor instanceof PerlVisitor) ((PerlVisitor)visitor).visitString(this);
     else super.accept(visitor);
   }
 
   @Override
   @Nullable
-  public PerlExpr getExpr() {
-    return findChildByClass(PerlExpr.class);
+  public PerlString getString() {
+    return findChildByClass(PerlString.class);
   }
 
 }

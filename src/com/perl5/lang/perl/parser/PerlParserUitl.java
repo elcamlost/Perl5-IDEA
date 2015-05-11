@@ -764,14 +764,7 @@ public class PerlParserUitl extends GeneratedParserUtilBase implements PerlEleme
 	public static boolean statementSemi(PsiBuilder b, int l)
 	{
 		IElementType tokenType = b.getTokenType();
-		if( tokenType == PERL_SEMI )
-		{
-			consumeToken(b, PERL_SEMI);
-			return true;
-		}
-		else if( tokenType == PERL_RBRACE)
-			return true;
-		return false;
+		return consumeToken(b, PERL_SEMI) || tokenType == PERL_RBRACE;
 	}
 
 	protected static PerlUseParameters parseUseParameters(PsiBuilder b, int l)

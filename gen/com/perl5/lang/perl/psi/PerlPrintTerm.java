@@ -5,9 +5,12 @@ import java.util.List;
 import org.jetbrains.annotations.*;
 import com.intellij.psi.PsiElement;
 
-public interface PerlGivenCompound extends PsiElement {
+public interface PerlPrintTerm extends PsiElement {
+
+  @NotNull
+  List<PerlExpr> getExprList();
 
   @Nullable
-  PerlExpr getExpr();
+  PerlPerlScalar getPerlScalar();
 
 }

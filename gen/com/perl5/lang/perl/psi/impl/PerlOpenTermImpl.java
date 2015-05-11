@@ -11,14 +11,14 @@ import static com.perl5.lang.perl.lexer.PerlElementTypes.*;
 import com.intellij.extapi.psi.ASTWrapperPsiElement;
 import com.perl5.lang.perl.psi.*;
 
-public class PerlWhileCompoundImpl extends ASTWrapperPsiElement implements PerlWhileCompound {
+public class PerlOpenTermImpl extends ASTWrapperPsiElement implements PerlOpenTerm {
 
-  public PerlWhileCompoundImpl(ASTNode node) {
+  public PerlOpenTermImpl(ASTNode node) {
     super(node);
   }
 
   public void accept(@NotNull PsiElementVisitor visitor) {
-    if (visitor instanceof PerlVisitor) ((PerlVisitor)visitor).visitWhileCompound(this);
+    if (visitor instanceof PerlVisitor) ((PerlVisitor)visitor).visitOpenTerm(this);
     else super.accept(visitor);
   }
 
@@ -26,6 +26,30 @@ public class PerlWhileCompoundImpl extends ASTWrapperPsiElement implements PerlW
   @Nullable
   public PerlExpr getExpr() {
     return findChildByClass(PerlExpr.class);
+  }
+
+  @Override
+  @Nullable
+  public PerlOpenFile getOpenFile() {
+    return findChildByClass(PerlOpenFile.class);
+  }
+
+  @Override
+  @NotNull
+  public PerlOpenHandle getOpenHandle() {
+    return findNotNullChildByClass(PerlOpenHandle.class);
+  }
+
+  @Override
+  @Nullable
+  public PerlOpenMode getOpenMode() {
+    return findChildByClass(PerlOpenMode.class);
+  }
+
+  @Override
+  @Nullable
+  public PerlOpenRef getOpenRef() {
+    return findChildByClass(PerlOpenRef.class);
   }
 
 }
